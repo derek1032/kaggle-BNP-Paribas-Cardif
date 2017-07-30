@@ -1,0 +1,161 @@
+---
+title: "BNP Project"
+output: pdf_document
+---
+
+```{r load library, message=FALSE, warning=FALSE, cache=TRUE}
+library(data.table)
+library(FactoMineR)
+library(factoextra)
+library(gplots)
+```
+
+## Exploratory data analysis for BNP Porject
+
+```{r load data, echo=FALSE, cache=TRUE}
+train <- fread("train.csv")
+# train[, .(target, v22, "v40-v50"=v40-v50), ]
+categorical.cols <- names(train)[sapply(train, is.character)]
+numerical.cols <- names(train)[sapply(train, is.numeric)][-c(1,2)]
+train.cat <- train[,..categorical.cols]
+train.num <- train[,..numerical.cols]
+```
+## Categorical variables
+
+### Looking for correlated categorical variables(Correspondence Analysis)
+```{r categorical, echo=TRUE, cache=TRUE}
+
+correlated.cat.vars = c()
+cats <- categorical.cols
+for (col1 in cats) {
+  cats <- cats[-1]
+  for (col2 in cats) {
+    tb <- train[, c(col1, col2), with=FALSE] 
+    ct <- table(tb) # contingency table
+    ca <- CA(ct, graph = FALSE) # correspondence analysis
+    trace <- sum(ca$eig$eigenvalue) 
+    if (sqrt(trace) > 1) {
+      correlated.cat.vars <- rbind(correlated.cat.vars, c(col1, col2, sqrt(trace)))
+    }
+  }
+}
+correlated.cat.vars <- data.frame(correlated.cat.vars)
+colnames(correlated.cat.vars) <- c("var1", "var2", "corr.coeff")
+correlated.cat.vars
+```
+
+### Categorical variables: v91-v107
+
+```{r v91-v107, message=FALSE, warning=FALSE, cache=TRUE}
+# Contingency table
+tab.v91.v107 <- table(train[,.(v91, v107),])
+tab.v91.v107
+
+# Draw balloon plot
+balloonplot(t(tab.v91.v107), main ="Categorical variable: v91-107", xlab ="",
+            ylab="", label = FALSE,  show.margins = FALSE)
+
+# Chi-squared test
+chisq.test(tab.v91.v107)
+
+# Correspondence analysis(CA)
+ca.v91.v107 <-  CA(tab.v91.v107, graph=TRUE)
+summary(ca.v91.v107, nb.dec = 2, ncp = 2)
+
+```
+
+These two variables are duplicates. Just keep one of them.
+
+### Categorical variables: v47-v110
+
+```{r cache=TRUE}
+# Contingency table
+tab.v47.v110 <- table(train[,.(v47, v110),])
+tab.v47.v110
+
+# Draw balloon plot
+balloonplot(t(tab.v47.v110), main ="Categorical variable: v91-107", xlab ="", 
+            ylab="", label = FALSE,  show.margins = FALSE)
+
+# Chi-squared test
+chisq.test(tab.v47.v110)
+
+# Correspondence analysis(CA)
+ca.v47.v110 <-  CA(tab.v47.v110, graph=TRUE)
+summary(ca.v47.v110, nb.dec = 2, ncp = 2)
+
+```
+
+### Categorical variables: v71-v75
+
+```{r cache=TRUE}
+# Contingency table
+tab.v71.v75 <- table(train[,.(v71, v75),])
+tab.v71.v75
+
+# Draw balloon plot
+balloonplot(t(tab.v71.v75), main ="Categorical variable: v71-75", xlab ="", 
+            ylab="", label = FALSE,  show.margins = FALSE)
+
+# Chi-squared test
+chisq.test(tab.v71.v75)
+
+# Correspondence analysis(CA)
+ca.v71.v75 <-  CA(tab.v71.v75, graph=TRUE)
+summary(ca.v71.v75, nb.dec = 2, ncp = 2)
+```
+
+
+```{r echo=FALSE, cache=TRUE}
+library(ggplot2)
+v71 = data.frame(table(train[, v71,]))
+ggplot(v71, aes(x=reorder(Var1, -Freq), y=Freq)) + 
+  geom_bar(stat="identity", fill="seagreen") +
+  labs(x="", y="Count", title="Categorical variable v71")
+
+v75 = data.frame(table(train[, v75,]))
+ggplot(v75, aes(x=reorder(Var1, -Freq), y=Freq)) + 
+  geom_bar(stat="identity", fill="seagreen") +
+  labs(x="", y="Count", title="Categorical variable v75")
+
+```
+
+### Categorical varibles: v71-v79
+
+```{r cache=TRUE}
+# Contingency table
+tab.v71.v79 <- table(train[,.(v71, v79),])
+tab.v71.v79
+
+# Draw balloon plot
+balloonplot(t(tab.v71.v79), main ="Categorical variable: v71-79", xlab ="", 
+            ylab="", label = FALSE,  show.margins = FALSE)
+
+```
+
+## Numerical variables
+
+### Dealing with missing values
+```{r cache=TRUE}
+library(caret)
+library(mice)
+
+# Pattern of missing values
+md.pattern(train.num)
+
+# Imputing missing values with mean
+impute.mean <- function(x) {
+  x[is.na(x)] <- mean(x, na.rm = TRUE)
+  x
+}
+imputed.train.num <- train.num[, lapply(.SD, impute.mean)]
+imputed.train.num
+
+findLinearCombos(imputed.train.num)$linearCombos # Remove 110
+findLinearCombos(imputed.train.num[,c(-110),])
+```
+
+
+## References:
+1. http://www.sthda.com/english/wiki/correspondence-analysis-in-r-the-ultimate-guide-for-the-analysis-the-visualization-and-the-interpretation-r-software-and-data-mining#correspondence-analysis-ca
+
