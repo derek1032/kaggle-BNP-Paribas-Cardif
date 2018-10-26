@@ -1,0 +1,12 @@
+.RData
+.Rhistory
+
+# R files
+*.R
+
+# Some file extension
+*.pdf
+*.csv
+
+# Other files
+.ipynb_checkpoints
